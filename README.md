@@ -6,7 +6,7 @@ A scaffold for mounting a company's venture context — and optional company-spe
 
 This repo is **a template, not a runtime**. To use it:
 
-1. **From an AIOS operator's perspective:** in your `~/obsidian` Claude session, run:
+1. **From an AIOS operator's perspective:** in your `~/aios` Claude session, run:
 
    ```
    /aios:company --create
