@@ -55,7 +55,7 @@ Beyond context, a company can distribute **its own infra** to operators who moun
 | Folder | Lands at (operator's vault) | Use case |
 |---|---|---|
 | `agents/` | `agents/{your-company}/` | Company-specific agents (e.g. `acme-board-prep`, `acme-onboarding`) |
-| `commands/` | `commands/{your-company}/` | Company-specific slash commands |
+| `plugins/<plugin>/` | `plugins/{your-company}/<plugin>/` | Company-distributed Claude Code plugins — self-contained bundles of slash commands + plugin-scoped agents/skills/hooks/MCPs |
 | `hooks/` | `hooks/{your-company}/` | Company-specific event hooks |
 | `mcps/` | `mcps/{your-company}/` | Company-specific MCP servers (e.g. integration with your CRM / billing) |
 | `skills/` | `skills/{your-company}/` | Company-specific Agent Skills |
@@ -82,4 +82,4 @@ GPL v2+ (template structure). Your company-specific content inside the forked re
 ## See also
 
 - [The-AIOS/aios](https://github.com/The-AIOS/aios) — the AIOS framework this template plugs into
-- `commands/company.md` (in The-AIOS/aios) — the canonical `/aios:company` command reference
+- `plugins/aios/commands/company.md` (in The-AIOS/aios) — the canonical `/aios:company` command reference
