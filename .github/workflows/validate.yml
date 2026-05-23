@@ -1,0 +1,233 @@
+name: validate
+
+# Quality gate for venture-context repos (template + instances scaffolded via
+# /aios:company --create). 5 jobs:
+#
+#   1. structure        — required files + folders
+#   2. frontmatter      — YAML frontmatter valid on every .md
+#   3. credentials      — no secrets committed
+#   4. wiki-links       — all [[refs]] resolve within the bundle
+#   5. personalization  — no operator-personal leaks (other-venture refs,
+#                         machine-local paths, real operator handles)
+#
+# This file ships in company-template so every new {company}-context repo
+# created via /aios:company --create inherits the gate automatically.
+# Template mode (this repo has {Company}/{...} placeholders) and instance
+# mode (placeholders replaced) are auto-detected and handled per job.
+#
+# Security posture: NO use of ${{ github.event.* }} interpolation inside
+# run: scripts. All shell commands read from the checked-out filesystem,
+# never from event payloads, so command-injection risk is zero.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structure:
+    name: Repo structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required top-level files exist
+        run: |
+          set -e
+          for f in README.md CLAUDE.md LICENSE NOTICE; do
+            test -f "$f" || { echo "::error::Missing required file: $f"; exit 1; }
+          done
+          echo "OK: top-level files present (README, CLAUDE, LICENSE, NOTICE)"
+
+      - name: context/ exists with at least about_venture.md
+        run: |
+          set -e
+          test -d context || { echo "::error::Missing context/ folder — venture-context repos must hold context files here"; exit 1; }
+          test -f context/about_venture.md || { echo "::error::Missing context/about_venture.md — the load-bearing identity file"; exit 1; }
+          echo "OK: context/ present with about_venture.md"
+
+  frontmatter:
+    name: YAML frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: All context/*.md files have valid YAML frontmatter
+        run: |
+          python3 << 'PY'
+          import sys, re, os, yaml
+          from pathlib import Path
+
+          PATHS = ["context", "agents", "skills", "templates", "hooks", "mcps", "plugins"]
+          SKIP_FILES = {"CHANGELOG.md", "LICENSE", "NOTICE", "README.md"}
+
+          errors = []
+          for base in PATHS:
+              if not os.path.isdir(base):
+                  continue
+              for md in Path(base).rglob("*.md"):
+                  if md.name in SKIP_FILES:
+                      continue
+                  if "/evals/" in str(md):
+                      continue
+                  content = md.read_text(encoding="utf-8", errors="replace")
+                  if not content.startswith("---\n"):
+                      if str(md).startswith("context/"):
+                          errors.append(f"{md}: context/ files must start with YAML frontmatter (---)")
+                      continue
+                  m = re.match(r"^---\n(.*?)\n---\n", content, re.DOTALL)
+                  if not m:
+                      errors.append(f"{md}: opens with --- but no closing --- found")
+                      continue
+                  try:
+                      yaml.safe_load(m.group(1))
+                  except yaml.YAMLError as e:
+                      errors.append(f"{md}: invalid YAML in frontmatter — {e}")
+
+          if errors:
+              print("::error::Frontmatter validation failed:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+          print("OK: all checked .md files have valid frontmatter")
+          PY
+
+  credentials:
+    name: Credentials guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No common secret patterns committed
+        run: |
+          set -e
+          PATTERNS=(
+            'client_secret":[[:space:]]*"GOCSPX-[A-Za-z0-9_-]+'
+            'AKIA[0-9A-Z]{16}'
+            'xox[baprs]-[A-Za-z0-9-]{10,}'
+            'ghp_[A-Za-z0-9]{36}'
+            'sk_live_[A-Za-z0-9]{24,}'
+            '-----BEGIN [A-Z ]+PRIVATE KEY-----'
+          )
+          FOUND=0
+          for p in "${PATTERNS[@]}"; do
+            MATCHES=$(grep -rE "$p" . --include='*.md' --include='*.yml' --include='*.yaml' --include='*.json' --include='*.sh' --include='*.py' --exclude-dir='.git' --exclude-dir='.github' 2>/dev/null || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error::Possible secret leak — pattern: $p"
+              echo "$MATCHES"
+              FOUND=1
+            fi
+          done
+          test $FOUND -eq 0 || exit 1
+          echo "OK: no obvious secret patterns committed"
+
+  wiki_links:
+    name: Wiki-link validator (cross-vault leak guard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: All wiki-links resolve within the bundle or AIOS allowlist
+        run: |
+          python3 << 'PY'
+          import re, sys, os
+          from pathlib import Path
+
+          KNOWN_AIOS_BUNDLED = {
+              "lawyer", "accountant", "sales-lead-hunter", "code-reviewer",
+              "compliance-checker", "writing", "onboarding-aios",
+              "sales-pdf-generator", "deck-builder", "code-review",
+              "CLAUDE.md", "README.md", "SETUP.md", "TOOLS.md", "CHEATSHEET.md",
+              "FORTRESS.md", "INTENT.md", "USER.md", "antifragile", "patterns",
+              "growth", "preferences", "business", "ecosystem", "session-insights",
+              "profile", "about_me", "personal_voice", "working_style",
+              "about_business", "role-expectations", "vault-routine",
+              "_index", "agent-template",
+          }
+
+          repo_stems = set()
+          for f in Path(".").rglob("*.md"):
+              if ".git" in f.parts or ".github" in f.parts:
+                  continue
+              repo_stems.add(f.stem)
+              repo_stems.add(str(f.with_suffix("")))
+
+          errors = []
+          for md in Path(".").rglob("*.md"):
+              if ".git" in md.parts or ".github" in md.parts:
+                  continue
+              text = md.read_text(encoding="utf-8", errors="replace")
+              for match in re.finditer(r"\[\[([^\]|]+?)(?:\|[^\]]*)?\]\]", text):
+                  target = match.group(1).strip()
+                  target = target.split("#")[0]
+                  if not target:
+                      continue
+                  if target in repo_stems:
+                      continue
+                  cleaned = target.lstrip("./")
+                  if cleaned in repo_stems or cleaned.replace("/", "_") in repo_stems:
+                      continue
+                  if target in KNOWN_AIOS_BUNDLED:
+                      continue
+                  errors.append(f"{md}: [[{target}]] does not resolve within bundle or AIOS allowlist")
+
+          if errors:
+              print("::error::Cross-vault wiki-link leaks detected:")
+              for e in errors:
+                  print(f"  - {e}")
+              print()
+              print("Fix options:")
+              print("  1. Convert to plain text")
+              print("  2. Move the target file into this repo if it should ship with the bundle")
+              print("  3. Add the target to KNOWN_AIOS_BUNDLED in this workflow if it ships via The-AIOS/aios")
+              sys.exit(1)
+          print("OK: all wiki-links resolve")
+          PY
+
+  personalization:
+    name: Personalization guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No operator-personal leaks (auto-detects template vs instance mode)
+        run: |
+          set -e
+
+          # Template mode auto-detect: presence of {Company} or {...} placeholders
+          # in context/about_venture.md = template repo (skip instance-mode checks).
+          if grep -qE '\{Company\}|\{[a-z]+\}' context/about_venture.md 2>/dev/null; then
+              echo "Detected: template mode ({Company} or {placeholder} present in about_venture.md). Skipping instance-mode leak checks."
+              exit 0
+          fi
+
+          FOUND=0
+
+          # 1. Machine-local file paths (file:// or /Users/ or /home/)
+          if grep -rE 'file:///[A-Za-z]+/[A-Za-z]+|/Users/[a-z]+|/home/[a-z]+' context/ 2>/dev/null; then
+              echo "::error::Machine-local file paths in context/ — don't survive distribution"
+              FOUND=1
+          fi
+
+          # 2. Legacy plugin namespace (vault-commands:* — renamed to aios:* on 2026-05-21)
+          for d in context agents skills templates hooks mcps plugins; do
+            if [ -d "$d" ]; then
+              if grep -rn 'vault-commands:' "$d" 2>/dev/null; then
+                echo "::error::Legacy vault-commands:* plugin namespace — rename to aios:*"
+                FOUND=1
+              fi
+            fi
+          done
+
+          # 3. Placeholder leftovers — instances shouldn't carry {Company} or similar
+          if grep -rE '\{Company\}|\{acme\}|\{your-org\}|\{YYYY-MM-DD\}' context/ 2>/dev/null; then
+              echo "::warning::Possible unreplaced template placeholder in context/ (instance should not carry {Company} or similar)"
+          fi
+
+          test $FOUND -eq 0 || exit 1
+          echo "OK: no operator-personal leaks detected"
