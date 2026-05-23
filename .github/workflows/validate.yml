@@ -247,6 +247,17 @@ jobs:
               FOUND=1
           fi
 
+          # 1b. Operator-personal home subdirs (other than ~/aios/, the canonical
+          # framework path that resolves on all operator machines via symlink or
+          # real clone). ~/obsidian/ is chuy's symlink target; sarah uses ~/aios/
+          # directly. Other ~/ subdirs (~/cowork/, ~/Downloads/, ~/Desktop/) are
+          # operator-personal too. Shared context should use ~/aios/ or env vars
+          # like $HOME, not hardcoded subdirs.
+          if grep -rE '~/(obsidian|cowork|Downloads|Desktop|code/the-aios)/' context/ agents/ skills/ templates/ hooks/ mcps/ plugins/ 2>/dev/null; then
+              echo "::error::Operator-personal home subdir in shared context — use ~/aios/ (the canonical framework path) or note it as operator-specific. Symmetric with: don't ship /Users/{op}/ paths either."
+              FOUND=1
+          fi
+
           # 2. Legacy plugin namespace
           for d in context agents skills templates hooks mcps plugins; do
             if [ -d "$d" ]; then
