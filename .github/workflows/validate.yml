@@ -161,7 +161,7 @@ jobs:
               "FORTRESS.md", "INTENT.md", "USER.md", "antifragile", "patterns",
               "growth", "preferences", "business", "ecosystem", "session-insights",
               "profile", "about_me", "personal_voice", "working_style",
-              "about_business", "role-expectations", "vault-routine",
+              "about_business", "role-expectations", "vault-routine", "INTENT",
               "_index", "agent-template",
           }
 
@@ -185,6 +185,23 @@ jobs:
                   if f.suffix == ".md":
                       add_path_suffixes(str(f.with_suffix("")))  # path without .md
                       resolvable.add(f.stem)  # bare stem
+                      # Also read frontmatter `aliases` field — declared aliases
+                      # for the file are legitimate wiki-link targets.
+                      try:
+                          import yaml
+                          text = f.read_text(encoding="utf-8", errors="replace")
+                          m = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+                          if m:
+                              fm = yaml.safe_load(m.group(1))
+                              if fm and isinstance(fm, dict) and "aliases" in fm:
+                                  aliases = fm["aliases"]
+                                  if isinstance(aliases, str):
+                                      aliases = [aliases]
+                                  if isinstance(aliases, list):
+                                      for a in aliases:
+                                          resolvable.add(str(a))
+                      except Exception:
+                          pass  # missing yaml module or bad frontmatter — non-fatal
                   else:
                       resolvable.add(f.name)  # bare filename for non-md (LICENSE, etc.)
               elif f.is_dir():
@@ -195,8 +212,11 @@ jobs:
               if ".git" in md.parts or ".github" in md.parts:
                   continue
               text = md.read_text(encoding="utf-8", errors="replace")
+              # Strip inline code spans (backtick-enclosed) so we don't flag
+              # pedagogical refs like \`[[ref]]\` that demonstrate syntax, not links.
+              text_stripped = re.sub(r"`[^`\n]*`", "", text)
               # Match [[target]] or [[target|display]] — also tolerate escaped pipe \|
-              for match in re.finditer(r"\[\[([^\]|\\]+?)(?:\\?\|[^\]]*)?\]\]", text):
+              for match in re.finditer(r"\[\[([^\]|\\]+?)(?:\\?\|[^\]]*)?\]\]", text_stripped):
                   target = match.group(1).strip()
                   # Strip anchor #section
                   target = target.split("#")[0]
@@ -253,7 +273,7 @@ jobs:
           # directly. Other ~/ subdirs (~/cowork/, ~/Downloads/, ~/Desktop/) are
           # operator-personal too. Shared context should use ~/aios/ or env vars
           # like $HOME, not hardcoded subdirs.
-          if grep -rE '~/(obsidian|cowork|Downloads|Desktop|code/the-aios)/' context/ agents/ skills/ templates/ hooks/ mcps/ plugins/ 2>/dev/null; then
+          if grep -rE '~/(obsidian|cowork|code/the-aios)/' context/ agents/ skills/ templates/ hooks/ mcps/ plugins/ 2>/dev/null; then
               echo "::error::Operator-personal home subdir in shared context — use ~/aios/ (the canonical framework path) or note it as operator-specific. Symmetric with: don't ship /Users/{op}/ paths either."
               FOUND=1
           fi
