@@ -135,6 +135,21 @@ jobs:
       - name: All wiki-links resolve within the bundle or AIOS allowlist
         run: |
           python3 << 'PY'
+          # Catches the cross-vault leak class: [[wiki-links]] that point at
+          # files not shipped in this repo. When an operator mounts this
+          # venture-context, only the FILES IN THIS REPO get distributed.
+          # Wiki-links pointing outside silently break.
+          #
+          # Resolution strategy: a wiki-link target resolves if it matches
+          # ANY of the following derived from files+folders in this repo:
+          #   - file stem (filename without extension)
+          #   - filename with extension
+          #   - full relative path (with or without extension)
+          #   - any path SUFFIX (trailing components) of a real file
+          #   - folder name (last component)
+          #   - any path SUFFIX of a folder
+          # OR the target is in KNOWN_AIOS_BUNDLED (resolves via The-AIOS/aios
+          # in any AIOS-mounted operator vault).
           import re, sys, os
           from pathlib import Path
 
@@ -150,27 +165,46 @@ jobs:
               "_index", "agent-template",
           }
 
-          repo_stems = set()
-          for f in Path(".").rglob("*.md"):
+          resolvable = set()
+
+          def add_path_suffixes(path_str):
+              """Add a path and all its trailing suffixes to resolvable."""
+              parts = path_str.split("/")
+              for i in range(len(parts)):
+                  suffix = "/".join(parts[i:])
+                  resolvable.add(suffix)
+                  resolvable.add(suffix.rstrip("/"))
+
+          # Walk all files (any extension)
+          for f in Path(".").rglob("*"):
               if ".git" in f.parts or ".github" in f.parts:
                   continue
-              repo_stems.add(f.stem)
-              repo_stems.add(str(f.with_suffix("")))
+              if f.is_file():
+                  rel = str(f)
+                  add_path_suffixes(rel)  # full path + suffixes
+                  if f.suffix == ".md":
+                      add_path_suffixes(str(f.with_suffix("")))  # path without .md
+                      resolvable.add(f.stem)  # bare stem
+                  else:
+                      resolvable.add(f.name)  # bare filename for non-md (LICENSE, etc.)
+              elif f.is_dir():
+                  add_path_suffixes(str(f))  # folder + suffixes
 
           errors = []
           for md in Path(".").rglob("*.md"):
               if ".git" in md.parts or ".github" in md.parts:
                   continue
               text = md.read_text(encoding="utf-8", errors="replace")
-              for match in re.finditer(r"\[\[([^\]|]+?)(?:\|[^\]]*)?\]\]", text):
+              # Match [[target]] or [[target|display]] — also tolerate escaped pipe \|
+              for match in re.finditer(r"\[\[([^\]|\\]+?)(?:\\?\|[^\]]*)?\]\]", text):
                   target = match.group(1).strip()
+                  # Strip anchor #section
                   target = target.split("#")[0]
+                  # Strip leading ./ and trailing /
+                  target = target.lstrip("./").rstrip("/")
                   if not target:
                       continue
-                  if target in repo_stems:
-                      continue
-                  cleaned = target.lstrip("./")
-                  if cleaned in repo_stems or cleaned.replace("/", "_") in repo_stems:
+                  if target in resolvable:
                       continue
                   if target in KNOWN_AIOS_BUNDLED:
                       continue
@@ -182,7 +216,7 @@ jobs:
                   print(f"  - {e}")
               print()
               print("Fix options:")
-              print("  1. Convert to plain text")
+              print("  1. Convert to plain text (operator-personal targets won't resolve in other vaults)")
               print("  2. Move the target file into this repo if it should ship with the bundle")
               print("  3. Add the target to KNOWN_AIOS_BUNDLED in this workflow if it ships via The-AIOS/aios")
               sys.exit(1)
@@ -199,22 +233,21 @@ jobs:
         run: |
           set -e
 
-          # Template mode auto-detect: presence of {Company} or {...} placeholders
-          # in context/about_venture.md = template repo (skip instance-mode checks).
+          # Template mode auto-detect
           if grep -qE '\{Company\}|\{[a-z]+\}' context/about_venture.md 2>/dev/null; then
-              echo "Detected: template mode ({Company} or {placeholder} present in about_venture.md). Skipping instance-mode leak checks."
+              echo "Detected: template mode. Skipping instance-mode leak checks."
               exit 0
           fi
 
           FOUND=0
 
-          # 1. Machine-local file paths (file:// or /Users/ or /home/)
+          # 1. Machine-local file paths
           if grep -rE 'file:///[A-Za-z]+/[A-Za-z]+|/Users/[a-z]+|/home/[a-z]+' context/ 2>/dev/null; then
               echo "::error::Machine-local file paths in context/ — don't survive distribution"
               FOUND=1
           fi
 
-          # 2. Legacy plugin namespace (vault-commands:* — renamed to aios:* on 2026-05-21)
+          # 2. Legacy plugin namespace
           for d in context agents skills templates hooks mcps plugins; do
             if [ -d "$d" ]; then
               if grep -rn 'vault-commands:' "$d" 2>/dev/null; then
@@ -224,9 +257,9 @@ jobs:
             fi
           done
 
-          # 3. Placeholder leftovers — instances shouldn't carry {Company} or similar
+          # 3. Placeholder leftovers
           if grep -rE '\{Company\}|\{acme\}|\{your-org\}|\{YYYY-MM-DD\}' context/ 2>/dev/null; then
-              echo "::warning::Possible unreplaced template placeholder in context/ (instance should not carry {Company} or similar)"
+              echo "::warning::Possible unreplaced template placeholder in context/"
           fi
 
           test $FOUND -eq 0 || exit 1
