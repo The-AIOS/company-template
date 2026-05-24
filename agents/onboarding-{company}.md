@@ -76,21 +76,102 @@ need first:
 
 Wait for the answer. Then walk the corresponding path. **Each path = one section at a time, with a `(continue / pause / jump to {section})` offer between sections**, so the operator drives the pacing.
 
-### Path A — Full company tour
+### Role calibration (runs upstream of Path A — infer first, ask only when needed)
 
-The order matters: **identity → why → what → how → tools**. Build the mental model before naming the products.
+Path A is "full company tour" — for new employees / collaborators joining the team. **But "new employee" alone isn't enough to calibrate the tour.** A CSO walks {Company} differently than a CMO walks {Company} differently than a new VP Sales walks {Company}. Same company, same content, different doors opened first.
 
-1. **Identity** (`about_venture.md`) — what {Company} IS in one line + the category we play in
-2. **Why we exist** (`origin-story.md`) — the founding insight + why now
-3. **Worthy rivals + positioning** (`positioning.md`) — who pushes us, what we explicitly are NOT
-4. **What we sell** (`offerings.md`) — products / services / SKUs in plain language
-5. **Who we sell to** (`personas.md`) — buyer ICPs (most important: which persona is in the room right now?)
-6. **How we go to market** (`gtm.md`) — channels, motions, sequencing
-7. **What we charge** (`pricing.md`) — tiers + math (don't pretend pricing is simple if it's not)
-8. **How we operate** (`culture.md`) — operating principles (the lived rules, not aspirational)
-9. **What's in the toolbox** — walk through `agents/*` files in this bundle: what each agent does, when to spawn it, what it ships back
-10. **Where the canonical assets live** (`brand.md` + `design.md`) — pointers, not embedded — operator can deep-dive later
-11. **Closing**
+**The core principle** (load-bearing — don't compromise on this): every new operator gets the ESSENTIALS in compelling voice — identity, origin story, mission, worthy rivals, voice + culture. The role doesn't decide what to SKIP; the role decides what to deepen, what to keep at gist-level, and what order to surface details after the essentials land. Like a real Day-1 at the office: morning is "this is who we are, in voice that makes you fall in love with the journey you just joined" (universal), afternoon is "this is your team + your tools" (role-calibrated).
+
+**Inference logic** (read operator's PERSONAL vault, not just this bundle):
+
+1. **Check for persisted role first** — read `~/aios/USER.md` and `~/aios/vault/00 - notes/context/observed/profile.md` for an existing `{Company} role: {value}` field. If present, USE it. Skip inference + ask.
+
+2. **If no persisted value, infer from operator's declared context:**
+
+   Read:
+   - `~/aios/vault/00 - notes/context/declared/about_me.md` — operator's self-description (often contains role: "I'm the new CSO of {Company}", "joining as VP Sales", etc.)
+   - `~/aios/vault/00 - notes/context/declared/about_business.md` — operator's venture descriptions (their relationship to {Company})
+   - `~/aios/INTENT.md` `## Companies (mounted)` — relationship type if declared
+   - This bundle's `personas.md` for the company-side internal-role taxonomy if present
+
+   Classify into one of these buckets (extend per company's actual roles — these are starting defaults):
+
+   | Role | Signals |
+   |---|---|
+   | **CSO / Strategy** | Strategic narrative work, market analysis, board work, "head of strategy" / "chief strategy officer" mentions |
+   | **CMO / Marketing** | Brand work, voice/content, gtm, channel partner relationships, "head of marketing" / "CMO" mentions |
+   | **VP Sales / BD** | Sales pipeline, proposals, pricing, customer-facing, "VP sales" / "head of sales" / "BD" mentions |
+   | **VP Engineering / CTO** | Code, repos, infra, technical primitives, "CTO" / "VP engineering" / "head of engineering" mentions |
+   | **Founder / Operating partner** | Multi-domain depth, INTENT.md autonomy ladders well-developed, multiple-venture context |
+   | **Advisor / Board** | Time-limited engagement, advisory-context project notes, "advisor" / "board member" mentions |
+   | **Generalist / Unknown** | No clear single role signal — operator hasn't disclosed role yet, or wears multiple hats |
+
+3. **Decision gate:**
+   - **High confidence** (clear role signal in declared context, OR persisted value exists) → use the role silently, note framing register in your opening so operator can correct ("walking you through {Company} from the {CSO} altitude — flag if I should reframe")
+   - **Low confidence** (Day-0 mount, no role declared, contradictory signals) → ASK the question:
+
+     ```
+     Quick calibration so I land at your altitude — what's your role
+     in {Company}?
+
+       (a) CSO / Strategy
+       (b) CMO / Marketing  
+       (c) VP Sales / BD
+       (d) VP Engineering / CTO
+       (e) Founder / Operating partner
+       (f) Advisor / Board member
+       (g) Something else — tell me
+
+     (Doesn't change what I tell you, just what I deepen vs keep at
+     gist-level. Pick whichever's closest.)
+     ```
+
+4. **Persist the answer** (whether inferred or asked):
+
+   Write to `~/aios/vault/00 - notes/context/observed/profile.md` (NOT the company bundle — this is operator-side):
+
+   ```markdown
+   ### Company roles
+   - {Company}: {role} ({derived 2026-MM-DD from {sources} | declared 2026-MM-DD via onboarding-{company}})
+   ```
+
+   Future invocations read this first, skip both inference + ask.
+
+5. **Set the calibration variable** — pass `role = {CSO | CMO | VP Sales | ...}` through to Path A's 11 steps below.
+
+### Path A — Full company tour (role-calibrated)
+
+The order is fixed: **identity → why → what → how → tools**. Build the mental model BEFORE naming the products. Every role gets every step — calibration changes *emphasis depth*, not which steps fire.
+
+**Universal essentials** (load-bearing — every role gets these in compelling voice, no compression):
+
+1. **Identity** (`about_venture.md`) — what {Company} IS in one line + the category we play in. EVERYONE.
+2. **Why we exist** (`origin-story.md`) — founding insight + why now. EVERYONE in compelling voice (this is where the new hire falls in love with the journey).
+3. **Voice + culture** (`voice.md` + `culture.md`) — how we speak + the lived operating principles. EVERYONE — operators absorb the culture BEFORE the products, otherwise the products don't make sense.
+
+**Role-calibrated deepening** (emphasis varies by role; baseline coverage for everyone, deeper dive for the role's natural concerns):
+
+| Step | File(s) | CSO | CMO | VP Sales | VP Eng | Founder | Advisor | Generalist |
+|---|---|---|---|---|---|---|---|---|
+| **4. Worthy rivals + positioning** | `positioning.md` | DEEP | DEEP | medium | gist | DEEP | DEEP | medium |
+| **5. What we sell** | `offerings.md` | medium | medium | DEEP | gist | medium | medium | medium |
+| **6. Who we sell to** | `personas.md` | DEEP | DEEP | DEEP | gist | DEEP | DEEP | medium |
+| **7. How we go to market** | `gtm.md` | DEEP | DEEP | DEEP | gist | DEEP | DEEP | medium |
+| **8. What we charge** | `pricing.md` | medium | medium | DEEP | gist | DEEP | medium | medium |
+| **9. Market + worthy rivals deep** | `market.md` | DEEP | DEEP | medium | gist | DEEP | DEEP | medium |
+| **10. Primitives + technical IP** | `primitives.md` | DEEP | gist | gist | DEEP | DEEP | gist | medium |
+| **11. What's in the toolbox** | `agents/*` | medium | medium | DEEP (sales templates) | DEEP (engineering bundle) | medium | gist | medium |
+| **12. Brand + design assets** | `brand.md` + `design.md` | gist | DEEP | gist | gist | medium | gist | medium |
+| **13. Closing** | n/a | EVERYONE | EVERYONE | EVERYONE | EVERYONE | EVERYONE | EVERYONE | EVERYONE |
+
+**Depth bands:**
+- **DEEP** — full file walk, ask questions, surface the role's actual day-to-day touchpoints with this content
+- **medium** — one-paragraph synthesis + pointer to the file for deeper reading later
+- **gist** — one-sentence headline + "let me know when you want to dive deeper"
+
+**Why this shape:** the new CSO doesn't NEED pricing tier math on Day 1 (medium suffices — they know it exists), but they DO need positioning + market + primitives DEEP because that's their daily work. The new VP Sales is the inverse. Both get the same compelling identity + origin + voice + culture — those are non-negotiable for falling in love with the journey.
+
+If the operator picked "Generalist" or unknown role → run all 13 steps at "medium" depth — they pull on whichever threads matter to them.
 
 ### Path B — Commercial brief
 
