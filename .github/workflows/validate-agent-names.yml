@@ -1,0 +1,71 @@
+name: validate-agent-names
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  agent-naming:
+    name: Venture-namespaced agent naming convention
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate naming convention
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          set -e
+
+          # Derive venture name from repo name: {venture}-context → {venture}
+          if [ "$REPO_NAME" = "company-template" ]; then
+            echo "Running on company-template — skipping (templates use {company} placeholder)"
+            exit 0
+          fi
+          VENTURE="${REPO_NAME%-context}"
+          echo "Venture detected: $VENTURE"
+          echo ""
+
+          FAILURES=""
+          CHECKED=0
+
+          while IFS= read -r f; do
+            if ! head -25 "$f" | grep -q "^name:"; then continue; fi
+            if ! head -25 "$f" | grep -q "^description:"; then continue; fi
+            if ! head -25 "$f" | grep -q "^tools:"; then continue; fi
+
+            NAME=$(head -25 "$f" | grep -m1 "^name:" | sed 's/^name: *//' | tr -d "'\"" | xargs)
+            BASENAME=$(basename "$f" .md)
+            CHECKED=$((CHECKED + 1))
+
+            if [ "$NAME" != "$BASENAME" ]; then
+              FAILURES="${FAILURES}
+  - ${f}: filename basename (${BASENAME}) does not match name field (${NAME})"
+              continue
+            fi
+
+            if [ "$NAME" = "onboarding-${VENTURE}" ]; then continue; fi
+
+            case "$NAME" in
+              ${VENTURE}-*) ;;
+              *) FAILURES="${FAILURES}
+  - ${f}: name '${NAME}' does not follow venture-namespaced convention. Expected: ${VENTURE}-{noun} (or onboarding-${VENTURE})" ;;
+            esac
+          done < <(find agents -type f -name "*.md" 2>/dev/null)
+
+          if [ -n "$FAILURES" ]; then
+            echo "::error::Agent naming convention violations:"
+            echo "$FAILURES"
+            echo ""
+            echo "Rule: agents under agents/ must follow {venture}-{noun} convention. Onboarding companion is the exception (onboarding-{venture})."
+            echo "See agents/README.md → 'Naming convention' for full rule + rationale."
+            exit 1
+          fi
+
+          echo "OK: all $CHECKED agent files follow the venture-namespaced naming convention"
