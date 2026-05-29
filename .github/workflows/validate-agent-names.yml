@@ -18,12 +18,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate naming convention
-        env:
-          REPO_NAME: ${{ github.event.repository.name }}
         run: |
           set -e
 
-          # Derive venture name from repo name: {venture}-context → {venture}
+          # Derive venture from the repo name via the built-in env var
+          # ($GITHUB_REPOSITORY = "owner/repo"); avoids ${{ github.event.* }}
+          # interpolation into run: (the banned-injection pattern).
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
           if [ "$REPO_NAME" = "company-template" ]; then
             echo "Running on company-template — skipping (templates use {company} placeholder)"
             exit 0
@@ -45,8 +46,7 @@ jobs:
             CHECKED=$((CHECKED + 1))
 
             if [ "$NAME" != "$BASENAME" ]; then
-              FAILURES="${FAILURES}
-  - ${f}: filename basename (${BASENAME}) does not match name field (${NAME})"
+              FAILURES="${FAILURES}\n  - ${f}: filename basename (${BASENAME}) does not match name field (${NAME})"
               continue
             fi
 
@@ -54,14 +54,13 @@ jobs:
 
             case "$NAME" in
               ${VENTURE}-*) ;;
-              *) FAILURES="${FAILURES}
-  - ${f}: name '${NAME}' does not follow venture-namespaced convention. Expected: ${VENTURE}-{noun} (or onboarding-${VENTURE})" ;;
+              *) FAILURES="${FAILURES}\n  - ${f}: name '${NAME}' does not follow venture-namespaced convention. Expected: ${VENTURE}-{noun} (or onboarding-${VENTURE})" ;;
             esac
           done < <(find agents -type f -name "*.md" 2>/dev/null)
 
           if [ -n "$FAILURES" ]; then
             echo "::error::Agent naming convention violations:"
-            echo "$FAILURES"
+            printf '%b\n' "$FAILURES"
             echo ""
             echo "Rule: agents under agents/ must follow {venture}-{noun} convention. Onboarding companion is the exception (onboarding-{venture})."
             echo "See agents/README.md → 'Naming convention' for full rule + rationale."
