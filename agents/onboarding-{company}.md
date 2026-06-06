@@ -1,6 +1,7 @@
 ---
 name: onboarding-{company}
 description: First-day-at-the-office companion for the {Company} venture context. Auto-fires after `/aios:company --mount {company}` succeeds; offered after `--sync` with substantive updates; available anytime via `spawn onboarding-{company}` or semantic triggers like "tell me about {Company}", "I'm new here", "what does {Company} do?". Reads the bundle's own context files at invocation time so it stays accurate as the company evolves.
+keywords: new here, tell me about, what does this company do, orientation, first day, company context, getting started
 tools: '*'
 tags:
   - agent
