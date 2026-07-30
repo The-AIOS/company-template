@@ -1,16 +1,44 @@
-The AIOS framework
+The AIOS company-template
 Copyright (C) 2026 The AIOS contributors
 <https://github.com/The-AIOS>
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
+TWO DIFFERENT THINGS LIVE IN THIS REPOSITORY, UNDER DIFFERENT TERMS
+===================================================================
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License (LICENSE file in this repo) for more details.
+1. THE TEMPLATE SCAFFOLDING — as shipped by The-AIOS
+   The directory layout, the README/CLAUDE.md guidance, the CI workflows, the
+   onboarding-agent template, and the context files in their unfilled template form.
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, see <https://www.gnu.org/licenses/>.
+   This is free software: you can redistribute it and/or modify it under the terms
+   of the GNU General Public License as published by the Free Software Foundation,
+   either version 2 of the License, or (at your option) any later version.
+
+   It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+   PURPOSE.  See the GNU General Public License for more details — the full text ships
+   as `LICENSE` in the template repo, and as `LICENSE-TEMPLATE` in a scaffolded company
+   repo. If you did not receive it, see <https://www.gnu.org/licenses/>.
+
+2. YOUR COMPANY'S CONTEXT — everything you write into it
+   The content of `context/` once filled in, your agents, skills, prompts, brand and
+   pricing material, positioning, personas, offerings — the business substance.
+
+   That is YOURS. It is not covered by the licence above, it is not GPL, and nothing
+   about using this template obliges you to publish it. License it however you choose,
+   or not at all. A company context repo is normally private.
+
+WHY THE ROOT `LICENSE` FILE MOVES WHEN YOU SCAFFOLD
+===================================================
+
+A `LICENSE` file at a repository root is read as "this repository is under these
+terms." That is correct for the template repo — it genuinely is GPL-2.0-or-later.
+It is wrong for your company repo, whose main content is item 2 above.
+
+So `/aios:company --create` moves the GPL text to `LICENSE-TEMPLATE` rather than
+deleting it: the scaffolding you received stays licensed and attributed, while the
+root of your repository stops asserting GPL over your business material. If your
+company wants its own licence, add your own `LICENSE` — that slot is yours.
+
+This split is the AIOS licence policy for company repos, recorded in the framework's
+`LICENSE-AUDIT.md` § 4. It is a statement of how this template is shipped, not legal
+advice; if the boundary matters commercially to you, have counsel look at it.

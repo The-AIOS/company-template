@@ -1,0 +1,20 @@
+# This file marks THE TEMPLATE REPO ITSELF (The-AIOS/company-template).
+#
+# It exists so CI can tell two situations apart, because the same workflows run in both:
+#
+#   1. This repo — the template. It is framework infra, GPL-2.0-or-later, and it MUST
+#      ship the GPL text as its root LICENSE.
+#
+#   2. A company repo scaffolded FROM this template by `/aios:company --create`. That repo
+#      holds a company's private business context — brand, pricing, positioning, personas,
+#      offerings. Per the AIOS licence policy (LICENSE-AUDIT.md § 4, "Company-distributed
+#      infra — company's discretion"), that content is NOT GPL and NOT the framework's to
+#      license. Such a repo must therefore NOT carry the framework's GPL as its root LICENSE.
+#
+# Why a sentinel and not the repo name: a legitimate FORK of the template (to contribute
+# upstream) is still the template and keeps its GPL LICENSE, but its `GITHUB_REPOSITORY`
+# is not `The-AIOS/company-template`. Keying on the repo name would fail every fork.
+# A file that travels with forks and is removed at scaffold time is the honest discriminator.
+#
+# `/aios:company --create` deletes this file and moves LICENSE -> LICENSE-TEMPLATE.
+# DO NOT delete it in the template repo, and DO NOT add it to a scaffolded company repo.

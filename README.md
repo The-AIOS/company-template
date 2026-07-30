@@ -77,7 +77,18 @@ Recommended repo name when you fork: `{your-org}/venture-context` (e.g. `acme/ve
 
 ## License
 
-GPL v2+ (template structure). Your company-specific content inside the forked repo is whatever you license it as.
+**Two things, two answers** — and which repo you're looking at decides where the GPL text lives:
+
+- **The template scaffolding** (layout, CI, READMEs, the onboarding-agent and context templates as shipped) — **GPL-2.0-or-later**.
+- **Your company's context** (filled-in `context/`, your agents, brand, pricing, positioning, personas) — **yours**, licensed however you choose or not at all. Not GPL. Not ours to license.
+
+**In this repo (the template):** the GPL text is the root `LICENSE`, because this repo genuinely *is* GPL-2.0-or-later framework infra. The `.aios-template-repo` marker file is what says so.
+
+**In a repo scaffolded by `/aios:company --create`:** that marker is removed and the GPL text moves to **`LICENSE-TEMPLATE`**. A root `LICENSE` is read as "this whole repository is under these terms" — true for the template, wrong for a repo whose substance is your private business context. Moving it rather than deleting it keeps the scaffolding you received licensed and attributed, while freeing the root `LICENSE` slot for your company's own choice.
+
+CI enforces whichever of the two applies, so a scaffolded repo can be both correct and green — it previously could not be. Full reasoning: [`NOTICE`](./NOTICE) and the framework's `LICENSE-AUDIT.md` § 4.
+
+> This describes how the template is shipped; it isn't legal advice. If the boundary matters commercially, have counsel look at it.
 
 ## See also
 

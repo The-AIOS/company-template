@@ -39,10 +39,46 @@ jobs:
       - name: Required top-level files exist
         run: |
           set -e
-          for f in README.md CLAUDE.md LICENSE NOTICE; do
+          for f in README.md CLAUDE.md NOTICE; do
             test -f "$f" || { echo "::error::Missing required file: $f"; exit 1; }
           done
-          echo "OK: top-level files present (README, CLAUDE, LICENSE, NOTICE)"
+          echo "OK: top-level files present (README, CLAUDE, NOTICE)"
+
+      # LICENSE is deliberately NOT in the list above. It is the one required file whose
+      # correct value DIFFERS between this repo and the repos scaffolded from it — and these
+      # same workflows run in both, because `/aios:company --create` clones this repo wholesale.
+      #
+      # Requiring LICENSE unconditionally created a contradiction with the framework's own
+      # policy (LICENSE-AUDIT.md § 4, "Company-distributed infra — company's discretion"):
+      # a scaffolded company repo either kept the framework's GPL text at its root — silently
+      # declaring a company's private brand/pricing/positioning material GPL-2.0, and PASSING
+      # CI, which is why it went unnoticed — or deleted it and went red on first push. There
+      # was no way to be both compliant and green. This step removes that fork.
+      - name: LICENSE matches this repo's role (template vs scaffolded company)
+        run: |
+          set -e
+          if [ -f .aios-template-repo ]; then
+            # ── The template repo (or a fork of it). It IS framework infra: GPL-2.0-or-later.
+            test -f LICENSE || {
+              echo "::error::The template repo must ship the GPL text as LICENSE (it is GPL-2.0-or-later framework infra)."; exit 1; }
+            grep -q "GNU GENERAL PUBLIC LICENSE" LICENSE || {
+              echo "::error::LICENSE exists but is not the GPL text. The template repo is GPL-2.0-or-later."; exit 1; }
+            echo "OK: template repo carries its GPL-2.0-or-later LICENSE"
+          else
+            # ── A scaffolded company repo. Its substance is the company's private business
+            #    context, which the framework does not license. The GPL text must still be
+            #    PRESENT (the scaffolding you received stays licensed + attributed) — but as
+            #    LICENSE-TEMPLATE, not as the root LICENSE that speaks for the whole repo.
+            if [ -f LICENSE ] && grep -q "GNU GENERAL PUBLIC LICENSE" LICENSE; then
+              echo "::error::This repo has no .aios-template-repo marker, so it is a scaffolded company repo — but its root LICENSE is the framework's GPL text. That declares your private company context GPL-2.0. Fix: git mv LICENSE LICENSE-TEMPLATE (keeps the scaffolding licensed and attributed), then add your own LICENSE only if your company wants one. See NOTICE."
+              exit 1
+            fi
+            test -f LICENSE-TEMPLATE || {
+              echo "::error::Missing LICENSE-TEMPLATE. A scaffolded repo must keep the template's GPL text (as LICENSE-TEMPLATE) so the scaffolding it received stays licensed and attributed. If you scaffolded before this rule existed, run: cp \$(git rev-parse --show-toplevel)/LICENSE LICENSE-TEMPLATE from a template checkout, or fetch it from The-AIOS/company-template."; exit 1; }
+            grep -q "GNU GENERAL PUBLIC LICENSE" LICENSE-TEMPLATE || {
+              echo "::error::LICENSE-TEMPLATE is not the GPL text — it must be the template's licence, verbatim."; exit 1; }
+            echo "OK: scaffolded repo keeps the template licence as LICENSE-TEMPLATE and does not assert GPL over company context"
+          fi
 
       - name: context/ exists with at least about_venture.md
         run: |
