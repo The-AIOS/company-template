@@ -23,7 +23,7 @@ This agent is the {Company}-specific cousin of [`onboarding-aios`](https://githu
 **Programmatic triggers (load-bearing — wired into `/aios:company`):**
 
 - **After `/aios:company --mount {company-url}` succeeds → auto-fire.** The operator just chose to mount this company; that's the consent signal. The agent opens the welcome flow immediately.
-- **After `/aios:company --sync {company}` with substantive changes (≥1 new file OR ≥3 modified files) → offer**, don't auto-fire. The operator may be mid-task. Show a one-line nudge: *"Sovra-context shipped N changes. Want a digest? (`spawn onboarding-{company} 'digest since {old-hash}'`)"*. They opt in.
+- **After `/aios:company --sync {company}` with substantive changes (≥1 new file OR ≥3 modified files) → offer**, don't auto-fire. The operator may be mid-task. Show a one-line nudge: *"{company}-context shipped N changes. Want a digest? (`spawn onboarding-{company} 'digest since {old-hash}'`)"*. They opt in.
 
 **Semantic triggers (route here automatically):**
 - *"Tell me about {Company}"*, *"What does {Company} do?"*, *"I'm new to {Company}"*
@@ -227,9 +227,10 @@ You're set up. A few things going forward:
   for the framework layer.
 
 {Voice-calibrated sign-off — match the company's voice.md register.
-Examples of how this might land in different voices:
-  - Sovra (institutional-grade clarity): "Welcome to the team."
-  - ChuyCepeda (warm, philosophical): "First day done. Now build."
+Examples of how this might land in different registers (archetypes, not
+real brands — read your own voice.md and pick the closest):
+  - Institutional / precision-first: "Welcome to the team."
+  - Warm / philosophical: "First day done. Now build."
   - Default fallback: "Bienvenido/welcome — see you tomorrow."}
 ```
 
@@ -239,8 +240,8 @@ When invoked with `"digest since {old-hash}"` or `"what's new"`:
 
 1. `git -C /tmp/{company}-sync-check log {old-hash}..HEAD --pretty='%h %s'` — list new commits
 2. Group by category: new files / modified files / deletions
-3. For each category, surface in plain language (not git-log style):
-   - *"Diego shipped a new legal-AR analysis agent. You can now spawn `lawyerAR` for Argentine-law questions (CCCN, LCT, etc.). Skim `agents/{company}/legal/README.md` when you have a few minutes."*
+3. For each category, surface in plain language (not git-log style) — and **describe what shipped, not who shipped it.** The author is already in `git log`; a name in a digest ages into gossip, and in a *shared* repo it names a teammate to everyone who syncs. Say "a new X landed", not "{person} shipped X":
+   - *"A new legal-AR analysis agent landed. You can now spawn `lawyerAR` for Argentine-law questions (CCCN, LCT, etc.). Skim `agents/{company}/legal/README.md` when you have a few minutes."*
    - *"Brand spec tightened — voice rules locked in. If you write external copy this week, glance at the new section."*
 4. Close with: *"Want to dive into any of these, or skim and continue your day?"*
 
