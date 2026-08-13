@@ -162,6 +162,58 @@ jobs:
           test $FOUND -eq 0 || exit 1
           echo "OK: no obvious secret patterns committed"
 
+  personal_leak:
+    name: Personal-reference guard (template only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stock examples name nobody real
+        run: |
+          set -e
+          # ROLE-AWARE, exactly like the LICENSE check above. This rule applies
+          # ONLY to the template repo. A *scaffolded* company repo SHOULD name
+          # its own teammates and its own brand — that is what a private
+          # venture-context repo is for. The template is the opposite: every
+          # scaffolded repo inherits its text, so a real name here is copied
+          # into other people's repos, where it means nothing to them and
+          # exposes someone who never agreed to be a stock example.
+          if [ ! -f .aios-template-repo ]; then
+            echo "OK: scaffolded company repo — naming your own people is expected, guard skipped"
+            exit 0
+          fi
+
+          FOUND=0
+
+          # 1. A capitalised name doing something = a named human in an example.
+          #    Non-human actors are allowlisted; anything else reads as a person.
+          HITS=$(grep -rnE '\b[A-Z][a-z]{2,11} (shipped|wrote|built|added|fixed|said|asked|noticed|flagged|reviewed|pushed|merged)\b' \
+                   . --include='*.md' --exclude-dir='.git' 2>/dev/null \
+                 | grep -vE '\b(Claude|Glass|AIOS|Git|GitHub|Obsidian|Someone|Somebody|Nobody|Whoever|Anyone)\b' || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::A stock example names a real person. Describe WHAT shipped, not WHO shipped it — the author is already in git log, and this text is copied into every scaffolded company repo."
+            echo "$HITS"
+            FOUND=1
+          fi
+
+          # 2. Real brands that have leaked into the TEMPLATE's examples before
+          #    and must stay out. Use register archetypes ("institutional /
+          #    precision-first") instead — an archetype travels to every
+          #    operator; a brand name means something to exactly one. Extend
+          #    this list with any brand you catch. Do NOT read it as "these
+          #    brands are banned everywhere": scaffolded repos skip this job.
+          for b in Sovra ChuyCepeda; do
+            HITS=$(grep -rn "$b" . --include='*.md' --exclude-dir='.git' 2>/dev/null || true)
+            if [ -n "$HITS" ]; then
+              echo "::error::Template example names the real brand '$b'. Use a register archetype instead."
+              echo "$HITS"
+              FOUND=1
+            fi
+          done
+
+          test $FOUND -eq 0 || exit 1
+          echo "OK: template examples name nobody real"
+
   wiki_links:
     name: Wiki-link validator (cross-vault leak guard)
     runs-on: ubuntu-latest
